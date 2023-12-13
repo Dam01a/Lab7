@@ -98,31 +98,43 @@ void list_add_at_index(list_t *l, block_t *blk, int index){
   }
 }
 
-void list_add_ascending_by_address(list_t *l, block_t *newblk){
-  
-   /*
-   * 1. Insert newblk into list l in ascending order based on the START address of the block.
-   * 
-   *    node_t *c = l.head;
-   *    Insert newblk After Current Node if:   newblk->start > c->start
-   */
+void list_add_ascending_by_address(list_t *l, block_t *newblk) {
+    node_t *current = l->head;
+    node_t *prev = NULL;
+    node_t *newNode = node_alloc(newblk);
+
+    while (current != NULL && current->blk->start < newblk->start) {
+        prev = current;
+        current = current->next;
+    }
+
+    if (prev == NULL) {
+        newNode->next = l->head;
+        l->head = newNode;
+    } else {
+        newNode->next = current;
+        prev->next = newNode;
+    }
 }
 
-void list_add_ascending_by_blocksize(list_t *l, block_t *newblk){
-   /*
-   * 1. Insert newblk into list l in ascending order based on the blocksize.
-   *    blocksize is calculated :  blocksize = end - start +1
-   * 
-   *    Ex:  blocksize = newblk->end - newblk->start
-   * 
-   *         node_t *c = l.head;
-   * 
-   *         curr_blocksize = c->blk->end - c->blk->start +1;
-   * 
-   *         Insert newblk After Current Node if:   blocksize >= curr_blocksize
-   * 
-   *    USE the compareSize()
-   */
+void list_add_ascending_by_blocksize(list_t *l, block_t *newblk) {
+    node_t *current = l->head;
+    node_t *prev = NULL;
+    node_t *newNode = node_alloc(newblk);
+    int newblk_size = newblk->end - newblk->start + 1;
+
+    while (current != NULL && compareSize(newblk_size, current->blk)) {
+        prev = current;
+        current = current->next;
+    }
+
+    if (prev == NULL) {
+        newNode->next = l->head;
+        l->head = newNode;
+    } else {
+        newNode->next = current;
+        prev->next = newNode;
+    }
 }
 
 void list_add_descending_by_blocksize(list_t *l, block_t *blk){
@@ -172,21 +184,23 @@ void list_add_descending_by_blocksize(list_t *l, block_t *blk){
   }
 }
 
-void list_coalese_nodes(list_t *l){ 
-  /*
-   * 1. Assuming you have passed in a sorted list of blocks based on addresses in ascending order
-   * 2. While list is not empty,
-   *    a. compare two nodes at a time to see if the prev.END + 1 == current.START, if so, they are physically adjacent
-   *    combine them by setting the prev.END = current.END. 
-   *    b. If not adjacent go to #6
-   * 3. point the prev.NEXT to the current.NEXT to skip over current.
-   * 4. Free current
-   * 5. go back to #2
-   * 6. Advance prev = current, and current = current.NEXT
-   * 7. go back to #2
-   * 
-   * USE the compareSize()
-   */
+void list_coalese_nodes(list_t *l) {
+    node_t *current = l->head;
+    node_t *prev = NULL;
+
+    while (current != NULL) {
+        int curr_end = current->blk->end;
+        if (prev != NULL && (prev->blk->end + 1) == current->blk->start) {
+            // Combine adjacent blocks
+            prev->blk->end = curr_end;
+            prev->next = current->next;
+            node_free(current);
+            current = prev;  // Recheck with the previous node
+        }
+
+        prev = current;
+        current = current->next;
+    }
 }
 
 block_t* list_remove_from_back(list_t *l){
